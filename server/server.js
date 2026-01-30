@@ -1,5 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { config } from 'dotenv';
+import OpenAI from 'openai';
+import { Readable } from 'stream';
 
 config();
 
@@ -14,8 +16,11 @@ wss.on('connection', (clientWs) => {
   console.log('Extension connected');
 
   let openaiWs = null;
+  let openaiClient = null;
   let clientConfig = null;
-  let audioBuffer = [];
+  let audioChunks = [];
+  let translationTimer = null;
+  const TRANSLATION_INTERVAL = 3000; // 3 seconds for batch translation
 
   // Handle messages from extension
   clientWs.on('message', async (data) => {
@@ -34,16 +39,32 @@ wss.on('connection', (clientWs) => {
           translateToEnglish: clientConfig.translateToEnglish
         });
 
-        // Connect to OpenAI Realtime API
-        openaiWs = await connectToOpenAI(clientConfig, clientWs);
+        // Create OpenAI client for translations
+        openaiClient = new OpenAI({ apiKey: clientConfig.apiKey });
+
+        if (clientConfig.translateToEnglish) {
+          // Use batch translation mode with whisper-1
+          console.log('Translation mode: Using whisper-1 for translation to English');
+          startTranslationMode(clientWs, clientConfig, openaiClient, audioChunks);
+        } else {
+          // Use real-time transcription mode with gpt-4o-transcribe
+          console.log('Transcription mode: Using gpt-4o-transcribe for real-time transcription');
+          openaiWs = await connectToOpenAI(clientConfig, clientWs);
+        }
       }
 
-      if (message.type === 'audio' && openaiWs && openaiWs.readyState === WebSocket.OPEN) {
-        // Forward audio to OpenAI
-        openaiWs.send(JSON.stringify({
-          type: 'input_audio_buffer.append',
-          audio: message.data
-        }));
+      if (message.type === 'audio') {
+        if (clientConfig?.translateToEnglish) {
+          // Buffer audio for batch translation
+          const audioData = Buffer.from(message.data, 'base64');
+          audioChunks.push(audioData);
+        } else if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {
+          // Forward audio to OpenAI Realtime API
+          openaiWs.send(JSON.stringify({
+            type: 'input_audio_buffer.append',
+            audio: message.data
+          }));
+        }
       }
     } catch (error) {
       console.error('Error processing message:', error);
@@ -59,14 +80,59 @@ wss.on('connection', (clientWs) => {
     if (openaiWs) {
       openaiWs.close();
     }
+    if (translationTimer) {
+      clearInterval(translationTimer);
+    }
+    audioChunks = [];
   });
 
   clientWs.on('error', (error) => {
     console.error('Client WebSocket error:', error);
   });
+
+  // Start translation mode with periodic batch processing
+  function startTranslationMode(clientWs, config, openai, chunks) {
+    translationTimer = setInterval(async () => {
+      if (chunks.length === 0) return;
+
+      // Get and clear buffer
+      const audioData = Buffer.concat(chunks);
+      chunks.length = 0;
+
+      // Skip if too small (less than 0.5 seconds of audio at 24kHz 16-bit)
+      if (audioData.length < 24000) return;
+
+      try {
+        // Convert PCM16 to WAV format
+        const wavBuffer = pcm16ToWav(audioData, 24000);
+
+        // Create a File-like object for the API
+        const audioFile = new File([wavBuffer], 'audio.wav', { type: 'audio/wav' });
+
+        // Call whisper-1 translations endpoint
+        const response = await openai.audio.translations.create({
+          file: audioFile,
+          model: 'whisper-1',
+          response_format: 'text'
+        });
+
+        if (response && response.trim()) {
+          clientWs.send(JSON.stringify({
+            type: 'transcription',
+            text: response.trim(),
+            isFinal: true
+          }));
+        }
+      } catch (error) {
+        console.error('Translation error:', error.message);
+        // Don't send error to client for every translation failure
+        // Just log it
+      }
+    }, TRANSLATION_INTERVAL);
+  }
 });
 
-// Connect to OpenAI Realtime API
+// Connect to OpenAI Realtime API for transcription
 async function connectToOpenAI(config, clientWs) {
   return new Promise((resolve, reject) => {
     const url = 'wss://api.openai.com/v1/realtime?intent=transcription';
@@ -183,6 +249,43 @@ async function connectToOpenAI(config, clientWs) {
       console.log('OpenAI connection closed:', code, reason.toString());
     });
   });
+}
+
+// Convert PCM16 to WAV format
+function pcm16ToWav(pcmData, sampleRate) {
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const dataSize = pcmData.length;
+  const headerSize = 44;
+  const fileSize = headerSize + dataSize;
+
+  const buffer = Buffer.alloc(fileSize);
+
+  // RIFF header
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(fileSize - 8, 4);
+  buffer.write('WAVE', 8);
+
+  // fmt chunk
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16); // Subchunk1Size (16 for PCM)
+  buffer.writeUInt16LE(1, 20); // AudioFormat (1 = PCM)
+  buffer.writeUInt16LE(numChannels, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(byteRate, 28);
+  buffer.writeUInt16LE(blockAlign, 32);
+  buffer.writeUInt16LE(bitsPerSample, 34);
+
+  // data chunk
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(dataSize, 40);
+
+  // Copy PCM data
+  pcmData.copy(buffer, 44);
+
+  return buffer;
 }
 
 // Graceful shutdown
