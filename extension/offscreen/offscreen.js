@@ -6,6 +6,9 @@ let audioContext = null;
 let websocket = null;
 let settings = {};
 let isRecording = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_BASE_DELAY = 1000;
 
 // Listen for messages from service worker
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -110,10 +113,25 @@ async function connectWebSocket() {
   return new Promise((resolve, reject) => {
     const serverUrl = settings.serverUrl || 'ws://localhost:3000';
 
+    // Update status
+    chrome.runtime.sendMessage({
+      action: 'statusUpdate',
+      status: 'Connecting to server...',
+      connecting: true
+    }).catch(() => {});
+
     websocket = new WebSocket(serverUrl);
 
     websocket.onopen = () => {
       console.log('WebSocket connected');
+      reconnectAttempts = 0; // Reset on successful connection
+
+      // Update status
+      chrome.runtime.sendMessage({
+        action: 'statusUpdate',
+        status: 'Connected',
+        connected: true
+      }).catch(() => {});
 
       // Send configuration
       websocket.send(JSON.stringify({
@@ -138,7 +156,7 @@ async function connectWebSocket() {
               text: message.text,
               isFinal: message.isFinal
             }
-          });
+          }).catch(() => {});
         }
 
         if (message.type === 'error') {
@@ -147,7 +165,7 @@ async function connectWebSocket() {
             action: 'statusUpdate',
             status: `Error: ${message.error}`,
             connected: false
-          });
+          }).catch(() => {});
         }
       } catch (e) {
         console.error('Failed to parse message:', e);
@@ -156,18 +174,50 @@ async function connectWebSocket() {
 
     websocket.onerror = (error) => {
       console.error('WebSocket error:', error);
-      reject(new Error('WebSocket connection failed'));
+      chrome.runtime.sendMessage({
+        action: 'statusUpdate',
+        status: 'Connection failed',
+        connected: false
+      }).catch(() => {});
+      reject(new Error('WebSocket connection failed. Is the server running?'));
     };
 
-    websocket.onclose = () => {
-      console.log('WebSocket closed');
-      if (isRecording) {
-        // Try to reconnect
+    websocket.onclose = (event) => {
+      console.log('WebSocket closed:', event.code, event.reason);
+
+      if (isRecording && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        const delay = RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts - 1);
+
+        chrome.runtime.sendMessage({
+          action: 'statusUpdate',
+          status: `Reconnecting (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`,
+          connecting: true
+        }).catch(() => {});
+
+        console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
+
         setTimeout(() => {
           if (isRecording) {
-            connectWebSocket().catch(console.error);
+            connectWebSocket().catch((err) => {
+              console.error('Reconnection failed:', err);
+              if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                chrome.runtime.sendMessage({
+                  action: 'statusUpdate',
+                  status: 'Connection lost. Please restart.',
+                  connected: false
+                }).catch(() => {});
+                stopRecording();
+              }
+            });
           }
-        }, 2000);
+        }, delay);
+      } else if (isRecording) {
+        chrome.runtime.sendMessage({
+          action: 'statusUpdate',
+          status: 'Disconnected',
+          connected: false
+        }).catch(() => {});
       }
     };
   });
