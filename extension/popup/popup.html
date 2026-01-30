@@ -3,63 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Live Captions</title>
+  <title>live captions</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
-    <h1>Live Captions</h1>
+    <h1>live captions</h1>
 
     <div class="status-bar">
       <span class="status-dot" id="statusDot"></span>
-      <span class="status-text" id="statusText">Disconnected</span>
+      <span class="status-text" id="statusText">disconnected</span>
     </div>
 
     <div class="section">
-      <label for="apiKey">OpenAI API Key</label>
+      <label for="apiKey">openai api key</label>
       <div class="input-group">
         <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
-        <button id="toggleKey" class="icon-btn" title="Show/Hide">
-          <span id="eyeIcon">👁</span>
+        <button id="toggleKey" class="icon-btn" title="show/hide">
+          <span id="eyeIcon">show</span>
         </button>
       </div>
-      <button id="saveKey" class="secondary-btn">Save Key</button>
+      <button id="saveKey" class="secondary-btn">save key</button>
     </div>
 
     <div class="section">
-      <label for="sourceLanguage">Source Language</label>
+      <label for="sourceLanguage">source language</label>
       <select id="sourceLanguage">
-        <option value="auto">Auto-detect</option>
-        <option value="en">English</option>
-        <option value="es">Spanish</option>
-        <option value="fr">French</option>
-        <option value="de">German</option>
-        <option value="it">Italian</option>
-        <option value="pt">Portuguese</option>
-        <option value="ru">Russian</option>
-        <option value="ja">Japanese</option>
-        <option value="ko">Korean</option>
-        <option value="zh">Chinese</option>
-        <option value="ar">Arabic</option>
-        <option value="hi">Hindi</option>
+        <option value="auto">auto-detect</option>
+        <option value="en">english</option>
+        <option value="es">spanish</option>
+        <option value="fr">french</option>
+        <option value="de">german</option>
+        <option value="it">italian</option>
+        <option value="pt">portuguese</option>
+        <option value="ru">russian</option>
+        <option value="ja">japanese</option>
+        <option value="ko">korean</option>
+        <option value="zh">chinese</option>
+        <option value="ar">arabic</option>
+        <option value="hi">hindi</option>
       </select>
     </div>
 
     <div class="section">
       <label>
         <input type="checkbox" id="translateToEnglish">
-        Translate to English
+        translate to english
       </label>
-      <p class="hint">Enable for non-English audio translation</p>
+      <p class="hint">enable for non-english audio translation</p>
     </div>
 
     <div class="actions">
-      <button id="startBtn" class="primary-btn">Start Captions</button>
-      <button id="stopBtn" class="danger-btn" disabled>Stop</button>
+      <button id="startBtn" class="primary-btn">start captions</button>
+      <button id="stopBtn" class="danger-btn" disabled>stop</button>
     </div>
 
     <div class="section">
-      <label for="serverUrl">Server URL</label>
+      <label for="serverUrl">server url</label>
       <input type="text" id="serverUrl" value="ws://localhost:3000" placeholder="ws://localhost:3000">
     </div>
   </div>

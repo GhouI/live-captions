@@ -41,23 +41,23 @@ async function loadSettings() {
 saveKeyBtn.addEventListener('click', async () => {
   const apiKey = apiKeyInput.value.trim();
   if (!apiKey) {
-    showStatus('Please enter an API key', 'error');
+    showStatus('please enter an api key', 'error');
     return;
   }
   if (!apiKey.startsWith('sk-')) {
-    showStatus('Invalid API key format', 'error');
+    showStatus('invalid api key format', 'error');
     return;
   }
 
   await chrome.storage.local.set({ apiKey });
-  showStatus('API key saved', 'success');
+  showStatus('api key saved', 'success');
 });
 
 // Toggle password visibility
 toggleKeyBtn.addEventListener('click', () => {
   const isPassword = apiKeyInput.type === 'password';
   apiKeyInput.type = isPassword ? 'text' : 'password';
-  eyeIcon.textContent = isPassword ? '🔒' : '👁';
+  eyeIcon.textContent = isPassword ? 'hide' : 'show';
 });
 
 // Save settings on change
@@ -77,13 +77,13 @@ serverUrlInput.addEventListener('change', async () => {
 startBtn.addEventListener('click', async () => {
   const apiKey = apiKeyInput.value.trim();
   if (!apiKey) {
-    showStatus('Please enter your OpenAI API key', 'error');
+    showStatus('please enter your openai api key', 'error');
     return;
   }
 
   const serverUrl = serverUrlInput.value.trim();
   if (!serverUrl) {
-    showStatus('Please enter the server URL', 'error');
+    showStatus('please enter the server url', 'error');
     return;
   }
 
@@ -108,7 +108,7 @@ startBtn.addEventListener('click', async () => {
     if (response?.success) {
       updateCaptureState(true);
     } else {
-      showStatus(response?.error || 'Failed to start capture', 'error');
+      showStatus(response?.error || 'failed to start capture', 'error');
     }
   });
 });
@@ -130,10 +130,10 @@ function updateCaptureState(isCapturing) {
   if (isCapturing) {
     statusDot.classList.add('connected');
     statusDot.classList.remove('connecting');
-    statusText.textContent = 'Capturing';
+    statusText.textContent = 'capturing';
   } else {
     statusDot.classList.remove('connected', 'connecting');
-    statusText.textContent = 'Disconnected';
+    statusText.textContent = 'disconnected';
   }
 
   chrome.storage.local.set({ isCapturing });

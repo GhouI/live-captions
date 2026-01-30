@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Live Captions",
+  "name": "live captions",
   "version": "1.0.0",
-  "description": "Real-time audio transcription and translation for browser tabs using OpenAI's gpt-4o-transcribe",
+  "description": "real-time audio transcription and translation for browser tabs using openai's gpt-4o-transcribe",
   "permissions": [
     "tabCapture",
     "offscreen",

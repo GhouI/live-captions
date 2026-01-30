@@ -24,7 +24,7 @@ function createCaptionOverlay() {
   // Create drag handle
   const dragHandle = document.createElement('div');
   dragHandle.className = 'live-captions-drag-handle';
-  dragHandle.innerHTML = '⋮⋮';
+  dragHandle.innerHTML = '::';
 
   captionContainer.appendChild(dragHandle);
   captionContainer.appendChild(captionText);

@@ -116,7 +116,7 @@ async function connectWebSocket() {
     // Update status
     chrome.runtime.sendMessage({
       action: 'statusUpdate',
-      status: 'Connecting to server...',
+      status: 'connecting to server...',
       connecting: true
     }).catch(() => {});
 
@@ -129,7 +129,7 @@ async function connectWebSocket() {
       // Update status
       chrome.runtime.sendMessage({
         action: 'statusUpdate',
-        status: 'Connected',
+        status: 'connected',
         connected: true
       }).catch(() => {});
 
@@ -163,7 +163,7 @@ async function connectWebSocket() {
           console.error('Server error:', message.error);
           chrome.runtime.sendMessage({
             action: 'statusUpdate',
-            status: `Error: ${message.error}`,
+            status: `error: ${message.error}`,
             connected: false
           }).catch(() => {});
         }
@@ -176,7 +176,7 @@ async function connectWebSocket() {
       console.error('WebSocket error:', error);
       chrome.runtime.sendMessage({
         action: 'statusUpdate',
-        status: 'Connection failed',
+        status: 'connection failed',
         connected: false
       }).catch(() => {});
       reject(new Error('WebSocket connection failed. Is the server running?'));
@@ -191,7 +191,7 @@ async function connectWebSocket() {
 
         chrome.runtime.sendMessage({
           action: 'statusUpdate',
-          status: `Reconnecting (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`,
+          status: `reconnecting (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`,
           connecting: true
         }).catch(() => {});
 
@@ -204,7 +204,7 @@ async function connectWebSocket() {
               if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
                 chrome.runtime.sendMessage({
                   action: 'statusUpdate',
-                  status: 'Connection lost. Please restart.',
+                  status: 'connection lost. please restart.',
                   connected: false
                 }).catch(() => {});
                 stopRecording();
@@ -215,7 +215,7 @@ async function connectWebSocket() {
       } else if (isRecording) {
         chrome.runtime.sendMessage({
           action: 'statusUpdate',
-          status: 'Disconnected',
+          status: 'disconnected',
           connected: false
         }).catch(() => {});
       }
